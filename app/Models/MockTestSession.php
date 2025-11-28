@@ -62,7 +62,7 @@ class MockTestSession extends Model
     // Methods
     public function generateRoomName()
     {
-        return 'mocktest-' . $this->id . '-' . uniqid();
+        return 'mocktest-' . $this->id . '-' . time() . '-' . rand(1000, 9999);
     }
 
     public function canStart()

@@ -489,75 +489,172 @@
     </div>
 
     <script>
-        // Configuration
+         // Configuration
         const domain = 'meet.jit.si';
-        const options = {
-            roomName: '{{ $mockTest->jitsi_room_name }}',
-            width: '100%',
-            height: '100%',
-            parentNode: document.querySelector('#meet'),
-            configOverwrite: {
-                startWithAudioMuted: false,
-                startWithVideoMuted: false,
-                enableWelcomePage: false,
-                prejoinPageEnabled: false,
-                disableModeratorIndicator: false,
-                startScreenSharing: false,
-                enableEmailInStats: false,
-                enableClosePage: false,
-                defaultLanguage: 'en',
-                disableThirdPartyRequests: true,
-                resolution: 720,
-                constraints: {
-                    video: {
-                        height: { ideal: 720, max: 1080, min: 240 }
-                    }
-                }
-            },
-            interfaceConfigOverwrite: {
-                TOOLBAR_BUTTONS: [
-                    'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
-                    'fodeviceselection', 'hangup', 'profile', 'chat', 'recording',
-                    'livestreaming', 'etherpad', 'sharedvideo', 'settings', 'raisehand',
-                    'videoquality', 'filmstrip', 'invite', 'feedback', 'stats', 'shortcuts',
-                    'tileview', 'videobackgroundblur', 'download', 'help', 'mute-everyone',
-                    'mute-video-everyone', 'security'
-                ],
-                SETTINGS_SECTIONS: ['devices', 'language', 'moderator', 'profile', 'calendar'],
-                SHOW_JITSI_WATERMARK: false,
-                SHOW_WATERMARK_FOR_GUESTS: false,
-                SHOW_BRAND_WATERMARK: false,
-                BRAND_WATERMARK_LINK: '',
-                SHOW_POWERED_BY: false,
-                SHOW_PROMOTIONAL_CLOSE_PAGE: false,
-                SHOW_CHROME_EXTENSION_BANNER: false,
-                DEFAULT_BACKGROUND: '#1a1a1a',
-                VIDEO_QUALITY_LABEL_DISABLED: true
-            },
-            userInfo: {
-                displayName: '{{ Auth::user()->name }}',
-                email: '{{ Auth::user()->email }}'
-            }
-        };
+        const roomName = '{{ $mockTest->jitsi_room_name }}';
+        const userName = '{{ Auth::user()->name }}';
+        const userEmail = '{{ Auth::user()->email }}';
+
+        console.log('Initializing Jitsi Meet with room:', roomName);
 
         // Global variables
         let api;
         let screenSharingEvents = [];
         let sessionStartTime = new Date();
         let timerInterval;
+        let connectionTimeout;
+
+        // Jitsi Meet options dengan config yang lebih permisif
+        const options = {
+            roomName: roomName,
+            width: '100%',
+            height: '100%',
+            parentNode: document.querySelector('#meet'),
+            userInfo: {
+                displayName: userName,
+                email: userEmail
+            },
+            configOverwrite: {
+                // Audio/Video settings
+                startWithAudioMuted: false,
+                startWithVideoMuted: false,
+                enableNoAudioDetection: false,
+                enableNoisyMicDetection: false,
+                
+                // UI settings
+                disableThirdPartyRequests: false,
+                prejoinPageEnabled: false,
+                enableWelcomePage: false,
+                enableClosePage: false,
+                defaultLanguage: 'en',
+                
+                // Performance settings
+                enableLayerSuspension: true,
+                resolution: 720,
+                constraints: {
+                    video: {
+                        height: { ideal: 720, max: 1080, min: 240 }
+                    }
+                },
+                
+                // Connection settings
+                enableIceRestart: true,
+                useStunTurn: true,
+                p2p: {
+                    enabled: true,
+                    stunServers: [
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:stun1.l.google.com:19302' }
+                    ]
+                },
+                
+                // Debug settings
+                debug: true,
+                logLevel: 'info'
+            },
+            interfaceConfigOverwrite: {
+                // UI simplification
+                DEFAULT_BACKGROUND: '#474747',
+                SHOW_JITSI_WATERMARK: false,
+                SHOW_WATERMARK_FOR_GUESTS: false,
+                SHOW_BRAND_WATERMARK: false,
+                SHOW_POWERED_BY: false,
+                SHOW_PROMOTIONAL_CLOSE_PAGE: false,
+                
+                // Toolbar configuration
+                TOOLBAR_BUTTONS: [
+                    'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
+                    'fodeviceselection', 'hangup', 'profile', 'chat', 'settings',
+                    'videoquality', 'filmstrip', 'invite', 'feedback', 'stats',
+                    'shortcuts', 'tileview', 'videobackgroundblur', 'download', 'help'
+                ],
+                
+                // Settings
+                SETTINGS_SECTIONS: ['devices', 'language', 'moderator', 'profile'],
+                DISABLE_VIDEO_BACKGROUND: false,
+                DISABLE_FOCUS_INDICATOR: false,
+                DISABLE_DOMINANT_SPEAKER_INDICATOR: false
+            }
+        };
+
+        // Tambahkan sebelum initializeJitsi()
+async function checkPermissions() {
+    try {
+        // Check camera permission
+        const cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        cameraStream.getTracks().forEach(track => track.stop());
+        
+        // Check microphone permission  
+        const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        micStream.getTracks().forEach(track => track.stop());
+        
+        return true;
+    } catch (error) {
+        console.error('Permission error:', error);
+        handleConnectionError('Camera or microphone access is required. Please check your browser permissions.');
+        return false;
+    }
+}
+
+// Update initialize function
+async function initializeJitsi() {
+    const hasPermissions = await checkPermissions();
+    if (!hasPermissions) return;
+    
+    // ... rest of initialization code
+}
 
         // Initialize Jitsi Meet
         function initializeJitsi() {
-            api = new JitsiMeetExternalAPI(domain, options);
-            
-            // Event listeners
-            api.addEventListener('videoConferenceJoined', handleConferenceJoined);
-            api.addEventListener('videoConferenceLeft', handleConferenceLeft);
-            api.addEventListener('participantJoined', handleParticipantJoined);
-            api.addEventListener('participantLeft', handleParticipantLeft);
+            try {
+                updateLoadingStatus('Creating Jitsi Meet instance...');
+                
+                // Clear any existing timeout
+                if (connectionTimeout) {
+                    clearTimeout(connectionTimeout);
+                }
+
+                // Set connection timeout (30 seconds)
+                connectionTimeout = setTimeout(() => {
+                    if (!api) {
+                        handleConnectionError('Connection timeout. Please check your internet connection and try again.');
+                    }
+                }, 30000);
+
+                api = new JitsiMeetExternalAPI(domain, options);
+                
+                // Event listeners
+                api.addEventListener('videoConferenceJoined', handleConferenceJoined);
+                api.addEventListener('videoConferenceLeft', handleConferenceLeft);
+                api.addEventListener('participantJoined', handleParticipantJoined);
+                api.addEventListener('participantLeft', handleParticipantLeft);
+                api.addEventListener('connectionEstablished', handleConnectionEstablished);
+                api.addEventListener('connectionFailed', handleConnectionFailed);
+                api.addEventListener('conferenceError', handleConferenceError);
+                api.addEventListener('readyToClose', handleReadyToClose);
+
+            } catch (error) {
+                console.error('Error initializing Jitsi Meet:', error);
+                handleConnectionError('Failed to initialize video call: ' + error.message);
+            }
         }
 
         // Event handlers
+        function handleConnectionEstablished() {
+            console.log('Connection established to Jitsi Meet');
+            updateLoadingStatus('Connection established, joining room...');
+        }
+
+        function handleConnectionFailed() {
+            console.error('Connection failed');
+            handleConnectionError('Failed to connect to video service. Please check your internet connection.');
+        }
+
+        function handleConferenceError(error) {
+            console.error('Conference error:', error);
+            handleConnectionError('Conference error: ' + (error.message || 'Unknown error'));
+        }
+
         function handleConferenceJoined() {
             console.log('Successfully joined the conference');
             hideLoadingScreen();
@@ -567,19 +664,17 @@
             // Additional event listeners
             api.addEventListener('screenSharingStatusChanged', handleScreenSharing);
             api.addEventListener('recordingStatusChanged', handleRecording);
+            
+            // Clear timeout
+            if (connectionTimeout) {
+                clearTimeout(connectionTimeout);
+            }
         }
 
         function handleConferenceLeft() {
             console.log('Left the conference');
             stopSessionTimer();
             showNotification('You have left the session.', 'info');
-            
-            // Auto-end session when all participants leave
-            setTimeout(() => {
-                if (confirm('Session ended. Would you like to save the session data?')) {
-                    endSession();
-                }
-            }, 3000);
         }
 
         function handleParticipantJoined(event) {
@@ -590,6 +685,11 @@
         function handleParticipantLeft(event) {
             console.log('Participant left:', event.displayName);
             showNotification(`${event.displayName} left the session`, 'warning');
+        }
+
+        function handleReadyToClose() {
+            console.log('Ready to close');
+            endSession();
         }
 
         function handleScreenSharing(event) {
@@ -614,9 +714,61 @@
             }
         }
 
-        // UI Functions
-        function hideLoadingScreen() {
+        // Connection error handling
+        function handleConnectionError(message) {
+            console.error('Connection error:', message);
+            
+            // Hide loading screen
             document.getElementById('loadingScreen').style.display = 'none';
+            
+            // Show error message
+            const errorMessage = document.getElementById('errorMessage');
+            const errorText = document.getElementById('errorText');
+            const retryButton = document.getElementById('retryButton');
+            
+            errorText.textContent = message;
+            errorMessage.style.display = 'block';
+            retryButton.style.display = 'block';
+            
+            // Clear timeout
+            if (connectionTimeout) {
+                clearTimeout(connectionTimeout);
+            }
+        }
+
+        function retryConnection() {
+            const errorMessage = document.getElementById('errorMessage');
+            const retryButton = document.getElementById('retryButton');
+            const loadingScreen = document.getElementById('loadingScreen');
+            
+            errorMessage.style.display = 'none';
+            retryButton.style.display = 'none';
+            loadingScreen.style.display = 'flex';
+            
+            updateLoadingStatus('Retrying connection...');
+            
+            // Reinitialize after a short delay
+            setTimeout(() => {
+                initializeJitsi();
+            }, 1000);
+        }
+
+        // UI Functions
+        function updateLoadingStatus(message) {
+            const loadingText = document.getElementById('loadingText');
+            const statusDetail = document.getElementById('statusDetail');
+            
+            if (loadingText) loadingText.textContent = message;
+            if (statusDetail) statusDetail.textContent = message;
+            
+            console.log('Status:', message);
+        }
+
+        function hideLoadingScreen() {
+            const loadingScreen = document.getElementById('loadingScreen');
+            if (loadingScreen) {
+                loadingScreen.style.display = 'none';
+            }
         }
 
         function showNotification(message, type = 'success') {
@@ -695,6 +847,16 @@
             if (confirm('Are you sure you want to end this session? This action cannot be undone.')) {
                 saveFinalScreenSharingData();
                 stopSessionTimer();
+                
+                // Try to leave the conference properly
+                if (api) {
+                    try {
+                        api.dispose();
+                    } catch (error) {
+                        console.error('Error disposing API:', error);
+                    }
+                }
+                
                 document.getElementById('endSessionForm').submit();
             }
         }
@@ -760,6 +922,7 @@
         // Event Listeners
         document.getElementById('endSession').addEventListener('click', endSession);
         document.getElementById('saveRecording').addEventListener('click', saveRecording);
+        document.getElementById('retryButton').addEventListener('click', retryConnection);
 
         // Auto-save screen sharing data every 30 seconds
         setInterval(saveFinalScreenSharingData, 30000);
@@ -783,7 +946,14 @@
 
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, initializing Jitsi Meet...');
             initializeJitsi();
+        });
+
+        // Error handling for uncaught errors
+        window.addEventListener('error', function(e) {
+            console.error('Global error:', e.error);
+            handleConnectionError('An unexpected error occurred: ' + e.message);
         });
     </script>
 </body>
