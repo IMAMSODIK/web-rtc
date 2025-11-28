@@ -62,43 +62,20 @@ class MockTestSession extends Model
     // Methods
     public function generateRoomName()
     {
-        return 'mocktest-' . $this->id . '-' . time() . '-' . rand(1000, 9999);
+        return 'mocktest-' . $this->id . '-' . uniqid();
     }
 
     public function canStart()
-{
-    if ($this->status !== 'accepted') {
+    {
+        if ($this->status !== 'accepted') {
         return false;
     }
     
-    if (!$this->scheduled_time) {
-        return false;
+    $startTime = $this->scheduled_time;
+    $endTime = $this->scheduled_time->copy()->addMinutes($this->duration_minutes);
+    $now = now();
+    
+    // Session can start 15 minutes before scheduled time and until it ends
+    return $now >= $startTime->subMinutes(15) && $now <= $endTime;
     }
-    
-    // Pastikan menggunakan timezone yang sama
-    $startTime = $this->scheduled_time->copy()->timezone(config('app.timezone'));
-    $endTime = $this->scheduled_time->copy()->addMinutes($this->duration_minutes)->timezone(config('app.timezone'));
-    $now = now()->timezone(config('app.timezone'));
-    
-    // Session bisa mulai 3 menit sebelum scheduled_time
-    $earliestStart = $startTime->subMinutes(3);
-    
-    return $now >= $earliestStart && $now <= $endTime;
-}
-
-// Tambahkan method untuk auto-timezone
-protected static function boot()
-{
-    parent::boot();
-    
-    static::retrieved(function ($model) {
-        // Otomatis convert ke timezone aplikasi saat retrieve
-        if ($model->proposed_time) {
-            $model->proposed_time->setTimezone(config('app.timezone'));
-        }
-        if ($model->scheduled_time) {
-            $model->scheduled_time->setTimezone(config('app.timezone'));
-        }
-    });
-}
 }

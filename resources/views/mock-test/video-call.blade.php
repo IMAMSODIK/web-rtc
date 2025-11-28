@@ -434,23 +434,11 @@
             <!-- Loading Screen -->
             <div class="loading-screen" id="loadingScreen">
                 <div class="loading-spinner"></div>
-                <p id="loadingText">Connecting to session...</p>
-                <div id="connectionStatus" class="mt-3">
-                    <small class="text-muted" id="statusDetail">Initializing...</small>
-                </div>
-                <button id="retryButton" class="btn btn-primary mt-3" style="display: none;">
-                    <i class="fas fa-redo me-2"></i>Retry Connection
-                </button>
+                <p>Connecting to session...</p>
             </div>
 
             <!-- Jitsi Meet Container -->
             <div id="meet"></div>
-            
-            <!-- Error Message -->
-            <div id="errorMessage" class="alert alert-danger" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;">
-                <i class="fas fa-exclamation-triangle me-2"></i>
-                <span id="errorText">Connection failed. Please check your internet connection.</span>
-            </div>
             
             <!-- Toggle Panel Button -->
             <button class="toggle-panel" id="togglePanel">
@@ -588,7 +576,6 @@
                 DISABLE_DOMINANT_SPEAKER_INDICATOR: false
             }
         };
-        
 
         // Initialize Jitsi Meet
         function initializeJitsi() {
@@ -833,16 +820,6 @@
             if (confirm('Are you sure you want to end this session? This action cannot be undone.')) {
                 saveFinalScreenSharingData();
                 stopSessionTimer();
-                
-                // Try to leave the conference properly
-                if (api) {
-                    try {
-                        api.dispose();
-                    } catch (error) {
-                        console.error('Error disposing API:', error);
-                    }
-                }
-                
                 document.getElementById('endSessionForm').submit();
             }
         }
@@ -908,7 +885,6 @@
         // Event Listeners
         document.getElementById('endSession').addEventListener('click', endSession);
         document.getElementById('saveRecording').addEventListener('click', saveRecording);
-        document.getElementById('retryButton').addEventListener('click', retryConnection);
 
         // Auto-save screen sharing data every 30 seconds
         setInterval(saveFinalScreenSharingData, 30000);
@@ -932,33 +908,8 @@
 
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM loaded, initializing Jitsi Meet...');
             initializeJitsi();
         });
-
-        // Error handling for uncaught errors
-        window.addEventListener('error', function(e) {
-            console.error('Global error:', e.error);
-            handleConnectionError('An unexpected error occurred: ' + e.message);
-        });
-
-        const domains = [
-    'meet.jit.si',
-    '8x8.vc',
-    'jitsi.riot.im'
-];
-
-let currentDomainIndex = 0;
-
-function tryNextDomain() {
-    if (currentDomainIndex < domains.length) {
-        const domain = domains[currentDomainIndex++];
-        console.log('Trying domain:', domain);
-        initializeJitsiWithDomain(domain);
-    } else {
-        handleConnectionError('All connection attempts failed. Please try again later.');
-    }
-}
     </script>
 </body>
 </html>
