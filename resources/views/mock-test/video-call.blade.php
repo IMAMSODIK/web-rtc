@@ -434,11 +434,23 @@
             <!-- Loading Screen -->
             <div class="loading-screen" id="loadingScreen">
                 <div class="loading-spinner"></div>
-                <p>Connecting to session...</p>
+                <p id="loadingText">Connecting to session...</p>
+                <div id="connectionStatus" class="mt-3">
+                    <small class="text-muted" id="statusDetail">Initializing...</small>
+                </div>
+                <button id="retryButton" class="btn btn-primary mt-3" style="display: none;">
+                    <i class="fas fa-redo me-2"></i>Retry Connection
+                </button>
             </div>
 
             <!-- Jitsi Meet Container -->
             <div id="meet"></div>
+            
+            <!-- Error Message -->
+            <div id="errorMessage" class="alert alert-danger" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <span id="errorText">Connection failed. Please check your internet connection.</span>
+            </div>
             
             <!-- Toggle Panel Button -->
             <button class="toggle-panel" id="togglePanel">
@@ -576,33 +588,7 @@
                 DISABLE_DOMINANT_SPEAKER_INDICATOR: false
             }
         };
-
-        // Tambahkan sebelum initializeJitsi()
-async function checkPermissions() {
-    try {
-        // Check camera permission
-        const cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
-        cameraStream.getTracks().forEach(track => track.stop());
         
-        // Check microphone permission  
-        const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        micStream.getTracks().forEach(track => track.stop());
-        
-        return true;
-    } catch (error) {
-        console.error('Permission error:', error);
-        handleConnectionError('Camera or microphone access is required. Please check your browser permissions.');
-        return false;
-    }
-}
-
-// Update initialize function
-async function initializeJitsi() {
-    const hasPermissions = await checkPermissions();
-    if (!hasPermissions) return;
-    
-    // ... rest of initialization code
-}
 
         // Initialize Jitsi Meet
         function initializeJitsi() {
@@ -955,6 +941,24 @@ async function initializeJitsi() {
             console.error('Global error:', e.error);
             handleConnectionError('An unexpected error occurred: ' + e.message);
         });
+
+        const domains = [
+    'meet.jit.si',
+    '8x8.vc',
+    'jitsi.riot.im'
+];
+
+let currentDomainIndex = 0;
+
+function tryNextDomain() {
+    if (currentDomainIndex < domains.length) {
+        const domain = domains[currentDomainIndex++];
+        console.log('Trying domain:', domain);
+        initializeJitsiWithDomain(domain);
+    } else {
+        handleConnectionError('All connection attempts failed. Please try again later.');
+    }
+}
     </script>
 </body>
 </html>
