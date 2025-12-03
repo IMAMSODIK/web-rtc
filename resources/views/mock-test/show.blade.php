@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Session Details - {{ $mockTest->title }}</title>
-    
+
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
+
     <style>
         :root {
             --primary-color: #4361ee;
@@ -25,7 +25,7 @@
             --box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
             --transition: all 0.3s ease;
         }
-        
+
         body {
             background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
             min-height: 100vh;
@@ -33,7 +33,7 @@
             color: var(--dark-color);
             padding: 20px 0;
         }
-        
+
         .card {
             border: none;
             border-radius: var(--border-radius);
@@ -42,12 +42,12 @@
             transition: var(--transition);
             margin-bottom: 30px;
         }
-        
+
         .card:hover {
             transform: translateY(-5px);
             box-shadow: 0 15px 40px rgba(0, 0, 0, 0.12);
         }
-        
+
         .card-header {
             background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
             color: white;
@@ -56,7 +56,7 @@
             position: relative;
             overflow: hidden;
         }
-        
+
         .card-header::before {
             content: '';
             position: absolute;
@@ -66,19 +66,19 @@
             bottom: 0;
             background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
         }
-        
+
         .page-title {
             font-weight: 700;
             margin-bottom: 5px;
             position: relative;
             z-index: 1;
         }
-        
+
         .session-title {
             font-size: 1.8rem;
             margin-bottom: 0;
         }
-        
+
         .user-info {
             display: flex;
             align-items: center;
@@ -92,22 +92,22 @@
             border-radius: 50px;
             backdrop-filter: blur(10px);
         }
-        
+
         .user-info i {
             font-size: 1.2rem;
         }
-        
+
         .card-body {
             padding: 30px;
         }
-        
+
         .info-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 25px;
             margin-bottom: 30px;
         }
-        
+
         .info-card {
             background: white;
             border-radius: 10px;
@@ -115,7 +115,7 @@
             box-shadow: 0 3px 15px rgba(0, 0, 0, 0.08);
             border-left: 4px solid var(--primary-color);
         }
-        
+
         .info-card h5 {
             font-weight: 600;
             margin-bottom: 15px;
@@ -124,11 +124,11 @@
             align-items: center;
             gap: 10px;
         }
-        
+
         .info-card h5 i {
             font-size: 1.2rem;
         }
-        
+
         .info-item {
             display: flex;
             justify-content: between;
@@ -136,24 +136,24 @@
             padding-bottom: 12px;
             border-bottom: 1px solid #f1f3f4;
         }
-        
+
         .info-item:last-child {
             margin-bottom: 0;
             padding-bottom: 0;
             border-bottom: none;
         }
-        
+
         .info-label {
             font-weight: 600;
             color: var(--dark-color);
             min-width: 120px;
         }
-        
+
         .info-value {
             color: #495057;
             flex: 1;
         }
-        
+
         .status-badge {
             padding: 6px 12px;
             border-radius: 50px;
@@ -162,32 +162,32 @@
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
-        
+
         .badge-pending {
             background: linear-gradient(135deg, #fff3cd, #ffc107);
             color: #856404;
         }
-        
+
         .badge-accepted {
             background: linear-gradient(135deg, #d1edff, #17a2b8);
             color: #0c5460;
         }
-        
+
         .badge-rejected {
             background: linear-gradient(135deg, #f8d7da, #dc3545);
             color: #721c24;
         }
-        
+
         .badge-completed {
             background: linear-gradient(135deg, #d4edda, #28a745);
             color: #155724;
         }
-        
+
         .badge-cancelled {
             background: linear-gradient(135deg, #e2e3e5, #6c757d);
             color: #383d41;
         }
-        
+
         .action-buttons {
             display: flex;
             gap: 15px;
@@ -196,7 +196,7 @@
             padding-top: 25px;
             border-top: 1px solid #e9ecef;
         }
-        
+
         .btn {
             border: none;
             border-radius: 8px;
@@ -208,80 +208,80 @@
             gap: 8px;
             text-decoration: none;
         }
-        
+
         .btn-primary {
             background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
             color: white;
         }
-        
+
         .btn-primary:hover {
             transform: translateY(-2px);
             box-shadow: 0 7px 15px rgba(67, 97, 238, 0.3);
             color: white;
         }
-        
+
         .btn-success {
             background: linear-gradient(135deg, #28a745, #20c997);
             color: white;
         }
-        
+
         .btn-success:hover {
             background: linear-gradient(135deg, #218838, #1e9e8a);
             transform: translateY(-2px);
             color: white;
         }
-        
+
         .btn-info {
             background: linear-gradient(135deg, #17a2b8, #6f42c1);
             color: white;
         }
-        
+
         .btn-info:hover {
             background: linear-gradient(135deg, #138496, #5a2d9c);
             transform: translateY(-2px);
             color: white;
         }
-        
+
         .btn-secondary {
             background: linear-gradient(135deg, #6c757d, #495057);
             color: white;
         }
-        
+
         .btn-secondary:hover {
             background: linear-gradient(135deg, #5a6268, #343a40);
             transform: translateY(-2px);
             color: white;
         }
-        
+
         .btn-danger {
             background: linear-gradient(135deg, #dc3545, #e83e8c);
             color: white;
         }
-        
+
         .btn-danger:hover {
             background: linear-gradient(135deg, #c82333, #d91a7a);
             transform: translateY(-2px);
             color: white;
         }
-        
+
         .notes-section {
             background: #f8f9fa;
             border-radius: 10px;
             padding: 20px;
             margin-top: 20px;
         }
-        
+
         .notes-section h6 {
             font-weight: 600;
             margin-bottom: 10px;
             color: var(--primary-color);
         }
-        
+
         .empty-note {
             color: #6c757d;
             font-style: italic;
         }
-        
+
         .floating-icon {
             position: absolute;
             right: 20px;
@@ -291,29 +291,29 @@
             opacity: 0.1;
             z-index: 0;
         }
-        
+
         @media (max-width: 768px) {
             .card-header {
                 padding: 20px;
             }
-            
+
             .card-body {
                 padding: 20px;
             }
-            
+
             .info-grid {
                 grid-template-columns: 1fr;
                 gap: 15px;
             }
-            
+
             .info-card {
                 padding: 20px;
             }
-            
+
             .action-buttons {
                 flex-direction: column;
             }
-            
+
             .btn {
                 width: 100%;
                 justify-content: center;
@@ -461,10 +461,24 @@
                                     <span class="info-label">Recording:</span>
                                     <span class="info-value">
                                         @if($mockTest->recording_url)
-                                            <a href="{{ $mockTest->recording_url }}" target="_blank" class="text-primary">
-                                                <i class="fas fa-external-link-alt me-1"></i>
-                                                View Recording
-                                            </a>
+                                            <div class="d-flex gap-2 flex-wrap">
+                                                <a href="{{ route('mock-test.view-recording', $mockTest) }}" target="_blank" class="btn btn-sm btn-primary">
+                                                    <i class="fas fa-play me-1"></i>
+                                                    View Recording
+                                                </a>
+                                                <a href="{{ route('mock-test.download-recording', $mockTest) }}" class="btn btn-sm btn-success">
+                                                    <i class="fas fa-download me-1"></i>
+                                                    Download
+                                                </a>
+                                            </div>
+                                            @if($mockTest->recording_size)
+                                                <small class="text-muted d-block mt-1">
+                                                    Size: {{ number_format($mockTest->recording_size / 1024 / 1024, 2) }} MB
+                                                    @if($mockTest->recording_duration)
+                                                        | Duration: {{ gmdate('H:i:s', $mockTest->recording_duration) }}
+                                                    @endif
+                                                </small>
+                                            @endif
                                         @else
                                             <span class="text-muted">No recording available</span>
                                         @endif
@@ -507,7 +521,7 @@
                                         {{ \Carbon\Carbon::parse($activity['timestamp'])->format('M j, g:i A') }}
                                     </small>
                                     <div>
-                                        <strong>{{ $activity['user'] }}</strong> - 
+                                        <strong>{{ $activity['user'] }}</strong> -
                                         {{ $activity['action'] }} screen sharing
                                     </div>
                                 </div>
@@ -532,7 +546,7 @@
                                         </button>
                                     </form>
                                 @endif
-                                
+
                                 @if($mockTest->status === 'accepted' && $mockTest->canStart())
                                     <a href="{{ route('mock-test.start', $mockTest) }}" class="btn btn-success">
                                         <i class="fas fa-video me-2"></i>Join Session
@@ -549,7 +563,7 @@
                                         <i class="fas fa-times me-2"></i>Reject
                                     </button>
                                 @endif
-                                
+
                                 @if($mockTest->status === 'accepted' && $mockTest->canStart())
                                     <a href="{{ route('mock-test.start', $mockTest) }}" class="btn btn-success">
                                         <i class="fas fa-play me-2"></i>Start Session
@@ -652,27 +666,27 @@
 
     <!-- Bootstrap 5 JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-    
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
     const proposedTimeInput = document.getElementById('proposed_time');
     if (proposedTimeInput) {
         const now = new Date();
-        
+
         // Convert ke waktu lokal Indonesia (UTC+7)
         const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
         const jakartaTime = new Date(utc + (3600000 * 7)); // UTC+7
-        
+
         // Tambah 3 menit
         jakartaTime.setMinutes(jakartaTime.getMinutes() + 3);
-        
+
         // Format ke YYYY-MM-DDTHH:MM
         const year = jakartaTime.getFullYear();
         const month = String(jakartaTime.getMonth() + 1).padStart(2, '0');
         const day = String(jakartaTime.getDate()).padStart(2, '0');
         const hours = String(jakartaTime.getHours()).padStart(2, '0');
         const minutes = String(jakartaTime.getMinutes()).padStart(2, '0');
-        
+
         const minDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
         proposedTimeInput.value = minDateTime;
         proposedTimeInput.min = minDateTime;

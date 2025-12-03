@@ -17,18 +17,25 @@ class MockTestSession extends Model
         'description',
         'proposed_time',
         'scheduled_time',
+        'started_at',
+        'ended_at',
         'status',
         'jitsi_room_name',
         'rejection_reason',
         'teacher_notes',
         'duration_minutes',
         'recording_url',
+        'recording_filename',
+        'recording_size',
+        'recording_duration',
         'screen_sharing_data',
     ];
 
     protected $casts = [
         'proposed_time' => 'datetime',
         'scheduled_time' => 'datetime',
+        'started_at' => 'datetime',
+        'ended_at' => 'datetime',
         'screen_sharing_data' => 'array',
     ];
 
@@ -65,17 +72,27 @@ class MockTestSession extends Model
         return 'mocktest-' . $this->id . '-' . uniqid();
     }
 
+    /**
+     * Check if session can be started
+     * Session can start 15 minutes before scheduled time until it ends
+     */
     public function canStart()
     {
+        // Must be accepted status
         if ($this->status !== 'accepted') {
-        return false;
-    }
-    
-    $startTime = $this->scheduled_time;
-    $endTime = $this->scheduled_time->copy()->addMinutes($this->duration_minutes);
-    $now = now();
-    
-    // Session can start 15 minutes before scheduled time and until it ends
-    return $now >= $startTime->subMinutes(15) && $now <= $endTime;
+            return false;
+        }
+
+        // Must have scheduled time
+        if (!$this->scheduled_time) {
+            return false;
+        }
+
+        $now = now();
+        $startWindow = $this->scheduled_time->copy()->subMinutes(15);
+        $endTime = $this->scheduled_time->copy()->addMinutes($this->duration_minutes);
+
+        // Session can start 15 minutes before scheduled time and until it ends
+        return $now >= $startWindow && $now <= $endTime;
     }
 }

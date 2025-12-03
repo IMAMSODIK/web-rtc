@@ -6,22 +6,25 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth'])->group(function () {
+    // Mock Test CRUD routes
     Route::get('/mock-test', [MockTestController::class, 'index'])->name('mock-test.index');
     Route::get('/mock-test/create', [MockTestController::class, 'create'])->name('mock-test.create');
     Route::post('/mock-test', [MockTestController::class, 'store'])->name('mock-test.store');
     Route::get('/mock-test/{mockTest}', [MockTestController::class, 'show'])->name('mock-test.show');
-    
-    // Teacher routes
+    Route::delete('/mock-test/{mockTest}', [MockTestController::class, 'destroy'])->name('mock-test.destroy');
+
+    // Teacher action routes
     Route::post('/mock-test/{mockTest}/accept', [MockTestController::class, 'accept'])->name('mock-test.accept');
     Route::post('/mock-test/{mockTest}/reject', [MockTestController::class, 'reject'])->name('mock-test.reject');
     Route::post('/mock-test/{mockTest}/end', [MockTestController::class, 'endSession'])->name('mock-test.end');
-    
+
     // Video call routes
     Route::get('/mock-test/{mockTest}/start', [MockTestController::class, 'startSession'])->name('mock-test.start');
     Route::post('/mock-test/{mockTest}/recording', [MockTestController::class, 'saveRecording'])->name('mock-test.save-recording');
+    Route::post('/mock-test/{mockTest}/recording-chunk', [MockTestController::class, 'uploadRecordingChunk'])->name('mock-test.upload-chunk');
+    Route::get('/mock-test/{mockTest}/recording/view', [MockTestController::class, 'viewRecording'])->name('mock-test.view-recording');
+    Route::get('/mock-test/{mockTest}/recording/download', [MockTestController::class, 'downloadRecording'])->name('mock-test.download-recording');
     Route::post('/mock-test/{mockTest}/screen-sharing', [MockTestController::class, 'saveScreenSharing'])->name('mock-test.save-screen-sharing');
-
-    Route::get('/mock-test/{mockTest}', [MockTestController::class, 'show'])->name('mock-test.show');
 });
 
 Route::get('/', function () {
