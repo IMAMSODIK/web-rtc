@@ -40,6 +40,7 @@
         userEmail: '',
         csrfToken: '',
         saveRecordingUrl: '',
+        uploadChunkUrl: '',
         saveScreenSharingUrl: '',
         sessionEndTime: null,
         useJaaS: false,
@@ -55,6 +56,13 @@
     let isConnected = false;
     let currentServer = null;
     let fallbackAttempted = false;
+
+    // Recording state
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let isRecording = false;
+    let recordingStartTime = null;
+    let localStream = null;
 
     /**
      * Determine which server to use
@@ -725,30 +733,321 @@
     }
 
     /**
-     * Save recording
+     * Save recording - Start/Stop recording toggle
      */
     function saveRecording() {
-        var recordingUrl = prompt('Please enter the recording URL:');
+        if (isRecording) {
+            stopRecording();
+        } else {
+            startRecording();
+        }
+    }
 
-        if (!recordingUrl) {
+    /**
+     * Start recording the session
+     */
+    async function startRecording() {
+        try {
+            // Get display media (screen) + audio
+            const displayStream = await navigator.mediaDevices.getDisplayMedia({
+                video: {
+                    displaySurface: 'browser',
+                    width: { ideal: 1920 },
+                    height: { ideal: 1080 },
+                    frameRate: { ideal: 30 }
+                },
+                audio: true
+            });
+
+            // Try to get user audio as well
+            let audioStream = null;
+            try {
+                audioStream = await navigator.mediaDevices.getUserMedia({
+                    audio: true,
+                    video: false
+                });
+            } catch (e) {
+                console.log('Could not get user audio:', e);
+            }
+
+            // Combine streams
+            const tracks = [...displayStream.getTracks()];
+            if (audioStream) {
+                audioStream.getAudioTracks().forEach(track => {
+                    tracks.push(track);
+                });
+            }
+
+            localStream = new MediaStream(tracks);
+
+            // Setup MediaRecorder
+            const mimeType = getSupportedMimeType();
+            mediaRecorder = new MediaRecorder(localStream, {
+                mimeType: mimeType,
+                videoBitsPerSecond: 2500000 // 2.5 Mbps
+            });
+
+            recordedChunks = [];
+            recordingStartTime = new Date();
+
+            mediaRecorder.ondataavailable = function(event) {
+                if (event.data && event.data.size > 0) {
+                    recordedChunks.push(event.data);
+                }
+            };
+
+            mediaRecorder.onstop = function() {
+                console.log('Recording stopped, processing...');
+                processRecording();
+            };
+
+            // Handle stream end (user stops sharing)
+            displayStream.getVideoTracks()[0].onended = function() {
+                if (isRecording) {
+                    stopRecording();
+                }
+            };
+
+            // Start recording
+            mediaRecorder.start(1000); // Collect data every second
+            isRecording = true;
+
+            // Update UI
+            updateRecordingUI(true);
+            showNotification('🔴 Recording started!', 'info');
+            updateSharingActivity('Recording started');
+
+            console.log('Recording started with mimeType:', mimeType);
+
+        } catch (error) {
+            console.error('Error starting recording:', error);
+
+            if (error.name === 'NotAllowedError') {
+                showNotification('Recording permission denied. Please allow screen sharing.', 'error');
+            } else {
+                showNotification('Error starting recording: ' + error.message, 'error');
+            }
+        }
+    }
+
+    /**
+     * Stop recording
+     */
+    function stopRecording() {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+            isRecording = false;
+
+            // Stop all tracks
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+            }
+
+            // Update UI
+            updateRecordingUI(false);
+            showNotification('Recording stopped. Processing...', 'info');
+            updateSharingActivity('Recording stopped');
+        }
+    }
+
+    /**
+     * Get supported MIME type for recording
+     */
+    function getSupportedMimeType() {
+        const types = [
+            'video/webm;codecs=vp9,opus',
+            'video/webm;codecs=vp8,opus',
+            'video/webm;codecs=vp9',
+            'video/webm;codecs=vp8',
+            'video/webm',
+            'video/mp4'
+        ];
+
+        for (const type of types) {
+            if (MediaRecorder.isTypeSupported(type)) {
+                return type;
+            }
+        }
+        return 'video/webm';
+    }
+
+    /**
+     * Process and upload recording
+     */
+    async function processRecording() {
+        if (recordedChunks.length === 0) {
+            showNotification('No recording data available', 'warning');
             return;
         }
 
-        $.ajax({
-            url: config.saveRecordingUrl,
-            method: 'POST',
-            data: {
-                _token: config.csrfToken,
-                recording_url: recordingUrl
-            },
-            success: function(response) {
-                showNotification('Recording saved successfully!', 'success');
-            },
-            error: function(xhr, status, error) {
-                console.error('Error saving recording:', error);
-                showNotification('Error saving recording. Please try again.', 'error');
+        showNotification('Processing recording, please wait...', 'info');
+
+        try {
+            // Create blob from chunks
+            const blob = new Blob(recordedChunks, { type: 'video/webm' });
+            const duration = Math.floor((new Date() - recordingStartTime) / 1000);
+
+            console.log('Recording blob size:', blob.size, 'bytes');
+            console.log('Recording duration:', duration, 'seconds');
+
+            // If file is small enough, upload directly
+            if (blob.size < 50 * 1024 * 1024) { // Less than 50MB
+                await uploadRecordingDirect(blob, duration);
+            } else {
+                // Upload in chunks for large files
+                await uploadRecordingChunked(blob, duration);
             }
+
+        } catch (error) {
+            console.error('Error processing recording:', error);
+            showNotification('Error processing recording: ' + error.message, 'error');
+
+            // Offer download as fallback
+            offerDownload();
+        }
+    }
+
+    /**
+     * Upload recording directly (for small files)
+     */
+    async function uploadRecordingDirect(blob, duration) {
+        const formData = new FormData();
+        formData.append('_token', config.csrfToken);
+        formData.append('recording', blob, 'recording.webm');
+        formData.append('duration', duration);
+
+        try {
+            const response = await fetch(config.saveRecordingUrl, {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                showNotification('✅ Recording saved successfully!', 'success');
+                updateSharingActivity('Recording saved: ' + result.filename);
+            } else {
+                throw new Error(result.message || 'Upload failed');
+            }
+        } catch (error) {
+            console.error('Upload error:', error);
+            showNotification('Upload failed. Offering download instead.', 'warning');
+            offerDownload();
+        }
+    }
+
+    /**
+     * Upload recording in chunks (for large files)
+     */
+    async function uploadRecordingChunked(blob, duration) {
+        const chunkSize = 5 * 1024 * 1024; // 5MB chunks
+        const totalChunks = Math.ceil(blob.size / chunkSize);
+        const filename = 'recording_' + Date.now();
+
+        showNotification('Uploading large recording (' + totalChunks + ' parts)...', 'info');
+
+        for (let i = 0; i < totalChunks; i++) {
+            const start = i * chunkSize;
+            const end = Math.min(start + chunkSize, blob.size);
+            const chunk = blob.slice(start, end);
+
+            // Convert chunk to base64
+            const base64Chunk = await blobToBase64(chunk);
+
+            try {
+                const response = await fetch(config.uploadChunkUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': config.csrfToken
+                    },
+                    body: JSON.stringify({
+                        chunk: base64Chunk.split(',')[1], // Remove data URL prefix
+                        chunkIndex: i,
+                        totalChunks: totalChunks,
+                        filename: filename,
+                        duration: duration
+                    })
+                });
+
+                const result = await response.json();
+
+                if (!result.success) {
+                    throw new Error(result.message || 'Chunk upload failed');
+                }
+
+                // Update progress
+                const progress = Math.round(((i + 1) / totalChunks) * 100);
+                showNotification('Uploading: ' + progress + '%', 'info');
+
+                if (result.complete) {
+                    showNotification('✅ Recording saved successfully!', 'success');
+                    updateSharingActivity('Recording saved: ' + result.filename);
+                }
+
+            } catch (error) {
+                console.error('Chunk upload error:', error);
+                showNotification('Upload failed at part ' + (i + 1), 'error');
+                offerDownload();
+                return;
+            }
+        }
+    }
+
+    /**
+     * Convert blob to base64
+     */
+    function blobToBase64(blob) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
         });
+    }
+
+    /**
+     * Offer download as fallback
+     */
+    function offerDownload() {
+        if (recordedChunks.length === 0) return;
+
+        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'recording_' + config.roomName + '_' + Date.now() + '.webm';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        showNotification('Recording downloaded to your device', 'success');
+    }
+
+    /**
+     * Update recording UI
+     */
+    function updateRecordingUI(recording) {
+        var $btn = $('#saveRecording');
+
+        if (recording) {
+            $btn.html('<i class="fas fa-stop"></i> Stop Recording');
+            $btn.addClass('recording-active');
+
+            // Add recording indicator
+            if ($('#recordingIndicator').length === 0) {
+                var indicator = '<div id="recordingIndicator" class="recording-indicator">' +
+                    '<span class="recording-dot"></span> REC' +
+                    '</div>';
+                $('.session-header').append(indicator);
+            }
+        } else {
+            $btn.html('<i class="fas fa-video"></i> Start Recording');
+            $btn.removeClass('recording-active');
+            $('#recordingIndicator').remove();
+        }
     }
 
     /**

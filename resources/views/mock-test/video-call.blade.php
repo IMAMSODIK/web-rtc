@@ -410,6 +410,52 @@
         #endSessionForm {
             display: none;
         }
+
+        /* Recording Button Active State */
+        .save-btn.recording-active {
+            background: linear-gradient(135deg, #ff0000, #cc0000);
+            animation: pulse-recording 1.5s infinite;
+        }
+
+        @keyframes pulse-recording {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.7);
+            }
+            50% {
+                box-shadow: 0 0 0 10px rgba(255, 0, 0, 0);
+            }
+        }
+
+        /* Recording Indicator */
+        .recording-indicator {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: rgba(255, 0, 0, 0.9);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 1001;
+            animation: pulse-recording 1.5s infinite;
+        }
+
+        .recording-dot {
+            width: 10px;
+            height: 10px;
+            background: white;
+            border-radius: 50%;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
     </style>
 </head>
 
@@ -446,12 +492,12 @@
 
             <div class="controls">
                 <button id="saveRecording" class="control-btn save-btn">
-                    <i class="fas fa-save"></i>
-                    <span class="d-none d-md-inline">Save</span>
+                    <i class="fas fa-video"></i>
+                    <span>Start Recording</span>
                 </button>
                 <button id="endSession" class="control-btn end-btn">
                     <i class="fas fa-phone-slash"></i>
-                    <span class="d-none d-md-inline">End</span>
+                    <span>End</span>
                 </button>
             </div>
         </div>
@@ -533,6 +579,7 @@
                 userEmail: '{{ auth()->user()->email }}',
                 csrfToken: '{{ csrf_token() }}',
                 saveRecordingUrl: '{{ route('mock-test.save-recording', $mockTest) }}',
+                uploadChunkUrl: '{{ route('mock-test.upload-chunk', $mockTest) }}',
                 saveScreenSharingUrl: '{{ route('mock-test.save-screen-sharing', $mockTest) }}',
                 @if ($mockTest->scheduled_time)
                     sessionEndTime: '{{ $mockTest->scheduled_time->addMinutes($mockTest->duration_minutes)->toISOString() }}'

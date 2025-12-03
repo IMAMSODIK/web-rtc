@@ -21,6 +21,9 @@ Route::middleware(['auth'])->group(function () {
     // Video call routes
     Route::get('/mock-test/{mockTest}/start', [MockTestController::class, 'startSession'])->name('mock-test.start');
     Route::post('/mock-test/{mockTest}/recording', [MockTestController::class, 'saveRecording'])->name('mock-test.save-recording');
+    Route::post('/mock-test/{mockTest}/recording-chunk', [MockTestController::class, 'uploadRecordingChunk'])->name('mock-test.upload-chunk');
+    Route::get('/mock-test/{mockTest}/recording/view', [MockTestController::class, 'viewRecording'])->name('mock-test.view-recording');
+    Route::get('/mock-test/{mockTest}/recording/download', [MockTestController::class, 'downloadRecording'])->name('mock-test.download-recording');
     Route::post('/mock-test/{mockTest}/screen-sharing', [MockTestController::class, 'saveScreenSharing'])->name('mock-test.save-screen-sharing');
 });
 

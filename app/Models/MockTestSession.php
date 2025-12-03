@@ -17,18 +17,25 @@ class MockTestSession extends Model
         'description',
         'proposed_time',
         'scheduled_time',
+        'started_at',
+        'ended_at',
         'status',
         'jitsi_room_name',
         'rejection_reason',
         'teacher_notes',
         'duration_minutes',
         'recording_url',
+        'recording_filename',
+        'recording_size',
+        'recording_duration',
         'screen_sharing_data',
     ];
 
     protected $casts = [
         'proposed_time' => 'datetime',
         'scheduled_time' => 'datetime',
+        'started_at' => 'datetime',
+        'ended_at' => 'datetime',
         'screen_sharing_data' => 'array',
     ];
 
