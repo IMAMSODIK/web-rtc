@@ -16,8 +16,7 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
+        // Create main teacher
         User::create([
             'name' => 'Teacher John',
             'email' => 'teacher@example.com',
@@ -25,7 +24,7 @@ class DatabaseSeeder extends Seeder
             'role' => 'teacher',
         ]);
 
-        // Create student
+        // Create main student
         User::create([
             'name' => 'Student Jane',
             'email' => 'student@example.com',
@@ -33,8 +32,11 @@ class DatabaseSeeder extends Seeder
             'role' => 'student',
         ]);
 
-        // Create more users if needed
-        User::factory(5)->create(['role' => 'teacher']);
-        User::factory(10)->create(['role' => 'student']);
+        // Create more users
+        User::factory(3)->create(['role' => 'teacher']);
+        User::factory(5)->create(['role' => 'student']);
+
+        // Run MockTestSession seeder
+        $this->call(MockTestSessionSeeder::class);
     }
 }

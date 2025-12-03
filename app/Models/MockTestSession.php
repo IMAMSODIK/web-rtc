@@ -65,17 +65,27 @@ class MockTestSession extends Model
         return 'mocktest-' . $this->id . '-' . uniqid();
     }
 
+    /**
+     * Check if session can be started
+     * Session can start 15 minutes before scheduled time until it ends
+     */
     public function canStart()
     {
+        // Must be accepted status
         if ($this->status !== 'accepted') {
-        return false;
-    }
-    
-    $startTime = $this->scheduled_time;
-    $endTime = $this->scheduled_time->copy()->addMinutes($this->duration_minutes);
-    $now = now();
-    
-    // Session can start 15 minutes before scheduled time and until it ends
-    return $now >= $startTime->subMinutes(15) && $now <= $endTime;
+            return false;
+        }
+
+        // Must have scheduled time
+        if (!$this->scheduled_time) {
+            return false;
+        }
+
+        $now = now();
+        $startWindow = $this->scheduled_time->copy()->subMinutes(15);
+        $endTime = $this->scheduled_time->copy()->addMinutes($this->duration_minutes);
+
+        // Session can start 15 minutes before scheduled time and until it ends
+        return $now >= $startWindow && $now <= $endTime;
     }
 }

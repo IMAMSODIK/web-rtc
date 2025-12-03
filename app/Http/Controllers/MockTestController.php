@@ -15,7 +15,7 @@ class MockTestController extends Controller
     public function index()
     {
         $user = Auth::user();
-        
+
         if ($user->isStudent()) {
             $sessions = $user->studentSessions()->with('teacher')->latest()->get();
             return view('mock-test.student-index', compact('sessions'));
@@ -65,6 +65,15 @@ class MockTestController extends Controller
         return view('mock-test.show', compact('mockTest'));
     }
 
+    public function destroy(MockTestSession $mockTest)
+    {
+        $this->authorize('delete', $mockTest);
+
+        $mockTest->delete();
+
+        return redirect()->route('mock-test.index')->with('success', 'Mock test session deleted successfully!');
+    }
+
     public function accept(Request $request, MockTestSession $mockTest)
     {
         $this->authorize('update', $mockTest);
@@ -74,11 +83,14 @@ class MockTestController extends Controller
             'teacher_notes' => 'nullable|string',
         ]);
 
+        // Generate room name when accepting
+        $roomName = 'mocktest-' . $mockTest->id . '-' . uniqid();
+
         $mockTest->update([
             'status' => 'accepted',
             'scheduled_time' => $request->scheduled_time,
             'teacher_notes' => $request->teacher_notes,
-            'jitsi_room_name' => $mockTest->generateRoomName(),
+            'jitsi_room_name' => $roomName,
         ]);
 
         return redirect()->route('mock-test.index')->with('success', 'Mock test session accepted!');
@@ -105,7 +117,15 @@ class MockTestController extends Controller
         $this->authorize('view', $mockTest);
 
         if (!$mockTest->canStart()) {
-            return redirect()->back()->with('error', 'Session cannot be started yet.');
+            return redirect()->back()->with('error', 'Session cannot be started yet. Please wait until the scheduled time.');
+        }
+
+        // Ensure room name exists
+        if (empty($mockTest->jitsi_room_name)) {
+            $mockTest->update([
+                'jitsi_room_name' => 'mocktest-' . $mockTest->id . '-' . uniqid()
+            ]);
+            $mockTest->refresh();
         }
 
         return view('mock-test.video-call', compact('mockTest'));
@@ -113,10 +133,12 @@ class MockTestController extends Controller
 
     public function endSession(MockTestSession $mockTest)
     {
-        $this->authorize('update', $mockTest);
+        // Both teacher and student can end session
+        $this->authorize('endSession', $mockTest);
 
         $mockTest->update([
             'status' => 'completed',
+            'ended_at' => now(),
         ]);
 
         return redirect()->route('mock-test.index')->with('success', 'Mock test session completed!');
@@ -124,7 +146,7 @@ class MockTestController extends Controller
 
     public function saveRecording(Request $request, MockTestSession $mockTest)
     {
-        $this->authorize('update', $mockTest);
+        $this->authorize('view', $mockTest);
 
         $request->validate([
             'recording_url' => 'required|url',
@@ -139,14 +161,18 @@ class MockTestController extends Controller
 
     public function saveScreenSharing(Request $request, MockTestSession $mockTest)
     {
-        $this->authorize('update', $mockTest);
+        $this->authorize('view', $mockTest);
 
         $request->validate([
             'screen_data' => 'required|array',
         ]);
 
+        // Merge with existing data
+        $existingData = $mockTest->screen_sharing_data ?? [];
+        $newData = array_merge($existingData, $request->screen_data);
+
         $mockTest->update([
-            'screen_sharing_data' => $request->screen_data,
+            'screen_sharing_data' => $newData,
         ]);
 
         return response()->json(['success' => true]);
